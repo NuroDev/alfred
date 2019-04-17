@@ -20,7 +20,7 @@ curl -L alfred.nuro.sh | sh
 | Grafana		| `monitoring.ip_address`   | `3000`      |
 | Heimdall		| `manager.ip_address`      | `81`        |
 | Node Exporter	| `node.metrics.ip_address` | `9100`      |
-| Pi-Hole       | `pi.ip_address/admin`     | `8181`      |
+| Pi-Hole       | `dns.ip_address/admin`    | `8181`      |
 | Prometheus    | `db.ip_address`           | `9090`      |
 | Traefik       | `proxy.ip_address`        | `7070`      |
 

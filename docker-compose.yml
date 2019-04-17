@@ -111,7 +111,7 @@ services:
             - 'DNS2=1.0.0.1'
             - 'PROXY_LOCATION: pihole'
             - 'TZ=Europe/London'
-            - 'VIRTUAL_HOST: pi.${DOMAIN}'
+            - 'VIRTUAL_HOST: dns.${DOMAIN}'
             - 'VIRTUAL_PORT: 80'
         volumes:
             - '${CONFIG_DIR}/pihole/:/etc/pihole/'
@@ -124,8 +124,8 @@ services:
         depends_on:
             - traefik
         labels:
-            - 'traefik.frontend.rule=Host:pi.${DOMAIN}'
-            - "traefik.frontend.rule=HostRegexp:pi.${DOMAIN},{catchall:.*}"
+            - 'traefik.frontend.rule=Host:dns.${DOMAIN}'
+            - "traefik.frontend.rule=HostRegexp:dns.${DOMAIN},{catchall:.*}"
             - "traefik.frontend.priority=1"
             - "traefik.backend=pihole"
             - "traefik.port=80"
