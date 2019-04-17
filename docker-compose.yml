@@ -1,0 +1,180 @@
+version: '3'
+
+networks:
+    alfred:
+        external: false
+
+services:
+    # ARM System Metrics
+    arm_exporter:
+        image: 'carlosedp/arm_exporter'
+        container_name: arm_exporter
+        restart: always
+        networks:
+            - alfred
+        ports:
+            - '9243:9243'
+        labels:
+            - 'traefik.frontend.rule=Host:arm.metrics.${DOMAIN}'
+
+    # Docker Metrics
+    cadvisor:
+        image: 'google/cadvisor:latest'
+        container_name: cadvisor
+        restart: always
+        networks:
+            - alfred
+        ports:
+            - '8080:8080'
+        volumes:
+            - '/:/rootfs:ro'
+            - '/var/run:/var/run:rw'
+            - '/sys:/sys:ro'
+            - '/var/lib/docker/:/var/lib/docker:ro'
+        labels:
+            - 'traefik.frontend.rule=Host:cadvisor.${DOMAIN}'
+
+    # Monitoring Dashboard
+    grafana:
+        image: 'grafana/grafana:latest'
+        container_name: grafana
+        restart: always
+        networks:
+            - alfred
+        ports:
+            - '3000:3000'
+        volumes:
+            - '${CONFIG_DIR}/grafana:/var/lib/grafana'
+            - '${CONFIG_DIR}/grafana/provisioning/:/etc/grafana/provisioning'
+        environment:
+            - 'GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel'
+        depends_on:
+            - arm_exporter
+            - cadvisor
+            - node_exporter
+            - prometheus
+        labels:
+            - 'traefik.frontend.rule=Host:monitoring.${DOMAIN}'
+
+    # Stack Manager
+    heimdall:
+        image: 'linuxserver/heimdall:latest'
+        container_name: heimdall
+        restart: always
+        networks:
+            - alfred
+        ports:
+            - '81:80'
+            - '444:443'
+        environment:
+            - 'PUID=${USER_UID}'
+            - 'PGID=${USER_GID}'
+            - 'TZ=Europe/London'
+        volumes:
+            - '${CONFIG_DIR}/heimdall:/config'
+        labels:
+            - 'traefik.frontend.rule=Host:${DOMAIN},manager.${DOMAIN}'
+
+    # System Metrics
+    node_exporter:
+        image: 'napnap75/rpi-prometheus:node_exporter'
+        container_name: node_exporter
+        restart: always
+        command:
+            - '--path.procfs=/host/proc'
+            - '--path.sysfs=/host/sys'
+            - '--collector.filesystem.ignored-mount-points'
+            - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+        networks:
+            - alfred
+        ports:
+            - '9100:9100'
+        volumes:
+            - '/proc:/host/proc:ro'
+            - '/sys:/host/sys:ro'
+            - '/:/rootfs:ro'
+        labels:
+            - 'traefik.frontend.rule=Host:node.metrics.${DOMAIN}'
+
+    # DNS
+    pihole:
+        image: 'pihole/pihole:latest'
+        container_name: pi_hole
+        restart: unless-stopped
+        ports:
+            - '53:53/tcp'
+            - '53:53/udp'
+            - '67:67/udp'
+            - '8181:80/tcp'
+        environment:
+            - 'DNS1=1.1.1.1'
+            - 'DNS2=1.0.0.1'
+            - 'PROXY_LOCATION: pihole'
+            - 'TZ=Europe/London'
+            - 'VIRTUAL_HOST: pi.${DOMAIN}'
+            - 'VIRTUAL_PORT: 80'
+        volumes:
+            - '${CONFIG_DIR}/pihole/:/etc/pihole/'
+            - '${CONFIG_DIR}/dnsmasq.d/:/etc/dnsmasq.d/'
+        dns:
+            - 127.0.0.1
+            - 1.1.1.1
+        cap_add:
+            - NET_ADMIN
+        depends_on:
+            - traefik
+        labels:
+            - 'traefik.frontend.rule=Host:pi.${DOMAIN}'
+            - "traefik.frontend.rule=HostRegexp:pi.${DOMAIN},{catchall:.*}"
+            - "traefik.frontend.priority=1"
+            - "traefik.backend=pihole"
+            - "traefik.port=80"
+
+    # Database
+    prometheus:
+        image: 'napnap75/rpi-prometheus:prometheus'
+        container_name: prometheus
+        restart: always
+        command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            - '--storage.tsdb.retention=10d'
+            - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+            - '--web.console.templates=/usr/share/prometheus/consoles'
+        networks:
+            - default
+            - alfred
+        ports:
+            - '9090:9090'
+        volumes:
+            - '${CONFIG_DIR}/prometheus/etc/:/etc/prometheus/'
+            - '${CONFIG_DIR}/prometheus/data/:/prometheus'
+        depends_on:
+            - arm_exporter
+            - cadvisor
+            - node_exporter
+        labels:
+            - 'traefik.frontend.rule=Host:db.${DOMAIN}'
+
+    # Reverse Proxy
+    traefik:
+        image: 'traefik:latest'
+        container_name: traefik
+        restart: always
+        command: '--api --docker --docker.domain=${DOMAIN}'
+        networks:
+            - default
+            - alfred
+        ports:
+            - '80:80'
+            - '443:443'
+            - '7070:8080'
+        expose:
+            - 8080
+        volumes:
+            - '/var/run/docker.sock:/var/run/docker.sock'
+            - '${CONFIG_DIR}/traefik.toml:/traefik.toml'
+            - '${CONFIG_DIR}/acme.json:/acme.json'
+        labels:
+            - 'traefik.frontend.rule=Host:proxy.${DOMAIN}'
+            - traefik.port=8080
