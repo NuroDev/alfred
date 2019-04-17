@@ -1,6 +1,6 @@
 <div align="center">
     <img src="https://i.imgur.com/Za4MzbY.png" width="128px" height="128px" />
-    <h1>J A R V I S</h1>
+    <h1>A L F R E D</h1>
     <p> Home Lab Butler </p>
 </div>
 
