@@ -87,7 +87,7 @@ services:
     pihole:
         image: 'pihole/pihole:latest'
         container_name: pi_hole
-        restart: unless-stopped
+        restart: always
         ports:
             - '53:53/tcp'
             - '53:53/udp'
@@ -154,7 +154,7 @@ services:
         ports:
             - '80:80'
             - '443:443'
-            - '7070:8080'
+            - '8888:8080'
         expose:
             - 8080
         volumes:
