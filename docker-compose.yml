@@ -5,18 +5,6 @@ networks:
         external: false
 
 services:
-    # ARM System Metrics
-    arm_exporter:
-        image: 'carlosedp/arm_exporter'
-        container_name: arm_exporter
-        restart: always
-        networks:
-            - alfred
-        ports:
-            - '9243:9243'
-        labels:
-            - 'traefik.frontend.rule=Host:arm.metrics.${DOMAIN}'
-
     # Docker Metrics
     cadvisor:
         image: 'google/cadvisor:latest'
@@ -49,7 +37,6 @@ services:
         environment:
             - 'GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel'
         depends_on:
-            - arm_exporter
             - cadvisor
             - node_exporter
             - prometheus
@@ -94,7 +81,7 @@ services:
             - '/sys:/host/sys:ro'
             - '/:/rootfs:ro'
         labels:
-            - 'traefik.frontend.rule=Host:node.metrics.${DOMAIN}'
+            - 'traefik.frontend.rule=Host:metrics.${DOMAIN}'
 
     # DNS
     pihole:
@@ -150,7 +137,6 @@ services:
             - '${CONFIG_DIR}/prometheus/etc/:/etc/prometheus/'
             - '${CONFIG_DIR}/prometheus/data/:/prometheus'
         depends_on:
-            - arm_exporter
             - cadvisor
             - node_exporter
         labels:
