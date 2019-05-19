@@ -83,10 +83,10 @@ services:
         labels:
             - 'traefik.frontend.rule=Host:metrics.${DOMAIN}'
 
-    # DNS
+    # Pi-Hole DNS
     pihole:
         image: 'pihole/pihole:latest'
-        container_name: pi_hole
+        container_name: pihole
         restart: always
         ports:
             - '53:53/tcp'
@@ -98,7 +98,7 @@ services:
             - 'DNS2=1.0.0.1'
             - 'PROXY_LOCATION: pihole'
             - 'TZ=Europe/London'
-            - 'VIRTUAL_HOST: dns.${DOMAIN}'
+            - 'VIRTUAL_HOST: pihole.${DOMAIN}'
             - 'VIRTUAL_PORT: 80'
         volumes:
             - '${CONFIG_DIR}/pihole/:/etc/pihole/'
@@ -111,8 +111,8 @@ services:
         depends_on:
             - traefik
         labels:
-            - 'traefik.frontend.rule=Host:dns.${DOMAIN}'
-            - "traefik.frontend.rule=HostRegexp:dns.${DOMAIN},{catchall:.*}"
+            - 'traefik.frontend.rule=Host:pihole.${DOMAIN}'
+            - "traefik.frontend.rule=HostRegexp:pihole.${DOMAIN},{catchall:.*}"
             - "traefik.frontend.priority=1"
             - "traefik.backend=pihole"
             - "traefik.port=80"
@@ -141,6 +141,90 @@ services:
             - node_exporter
         labels:
             - 'traefik.frontend.rule=Host:db.${DOMAIN}'
+
+    # SteamCache - Blizzard
+    steamcache_blizzard:
+        image: 'steamcache/generic:latest'
+        container_name: steamcache_blizzard
+        restart: always
+        networks:
+            - alfred
+        environment:
+            - 'VIRTUAL_HOST=dist.blizzard.com,dist.blizzard.com.edgesuite.net,llnw.blizzard.com,edgecast.blizzard.com,blizzard.vo.llnwd.net,blzddist1-a.akamaihd.net,blzddist2-a.akamaihd.net,blzddist3-a.akamaihd.net,blzddist4-a.akamaihd.net,level3.blizzard.com,nydus.battle.net,edge.blizzard.top.comcast.net'
+        volumes:
+            - ${CONFIG_DIR}/cache/blizzard/cache:/data/cache
+            - ${CONFIG_DIR}/cache/blizzard/logs:/data/logs
+        labels:
+            - 'traefik.frontend.rule=Host:blizzard.cache.${DOMAIN}'
+
+    # SteamCache DNS
+    steamcache_dns:
+        image: 'steamcache/steamcache-dns:latest'
+        container_name: steamcache_dns
+        restart: always
+        networks:
+            - alfred
+        ports:
+            - '54:53/udp'
+        labels:
+            - 'traefik.frontend.rule=Host:dns.cache.${DOMAIN}'
+
+    # SteamCache - Origin
+    steamcache_origin:
+        image: 'steamcache/generic:latest'
+        container_name: steamcache_origin
+        restart: always
+        networks:
+            - alfred
+        environment:
+            - 'VIRTUAL_HOST=origin-a.akamaihd.net,akamai.cdn.ea.com,lvlt.cdn.ea.com,river.data.ea.com,origin-a.akamaihd.net.edgesuite.net'
+        volumes:
+            - ${CONFIG_DIR}/cache/origin/cache:/data/cache
+            - ${CONFIG_DIR}/cache/origin/logs:/data/logs
+        labels:
+            - 'traefik.frontend.rule=Host:origin.cache.${DOMAIN}'
+
+    # SteamCache - Proxy
+    steamcache_proxy:
+        image: 'steamcache/sniproxy:latest'
+        container_name: steamcache_proxy
+        restart: always
+        networks:
+            - alfred
+        ports:
+            - '442:443/tcp'
+        labels:
+            - 'traefik.frontend.rule=Host:proxy.cache.${DOMAIN}'
+
+    # SteamCache - Steam
+    steamcache_steam:
+        image: 'steamcache/generic:latest'
+        container_name: steamcache_steam
+        restart: always
+        networks:
+            - alfred
+        environment:
+            - 'VIRTUAL_HOST=*.content.steampowered.com,content1.steampowered.com,content2.steampowered.com,content3.steampowered.com,content4.steampowered.com,content5.steampowered.com,content6.steampowered.com,content7.steampowered.com,content8.steampowered.com,cs.steampowered.com,steamcontent.com,client-download.steampowered.com,*.hsar.steampowered.com.edgesuite.net,*.akamai.steamstatic.com,content-origin.steampowered.com,clientconfig.akamai.steamtransparent.com,steampipe.akamaized.net,edgecast.steamstatic.com,steam.apac.qtlglb.com.mwcloudcdn.com,*.cs.steampowered.com,*.edgecast.steamstatic.com,*.steamcontent.com,cdn1-sea1.valve.net,cdn2-sea1.valve.net,*.steam-content-dnld-1.apac-1-cdn.cqloud.com,steam.apac.qtlglb.com,edge.steam-dns.top.comcast.net,edge.steam-dns-2.top.comcast.net,steamcdn-a.akamaihd.net'
+        volumes:
+            - ${CONFIG_DIR}/cache/steam/cache:/data/cache
+            - ${CONFIG_DIR}/cache/steam/logs:/data/logs
+        labels:
+            - 'traefik.frontend.rule=Host:steam.cache.${DOMAIN}'
+
+    # SteamCache - Uplay
+    steamcache_uplay:
+        image: 'steamcache/generic:latest'
+        container_name: steamcache_uplay
+        restart: always
+        networks:
+            - alfred
+        environment:
+            - 'VIRTUAL_HOST=*.cdn.ubi.com'
+        volumes:
+            - ${CONFIG_DIR}/cache/uplay/cache:/data/cache
+            - ${CONFIG_DIR}/cache/uplay/logs:/data/logs
+        labels:
+            - 'traefik.frontend.rule=Host:uplay.cache.${DOMAIN}'
 
     # Reverse Proxy
     traefik:
