@@ -9,7 +9,7 @@ These are the required libraries/packages to run this stack:
 
 ## 🚀 Usage:
 ```shell
-curl -L alfred.nuro.sh | sh
+curl -L alfred.nuro.dev | sh
 ```
 
 ## 🔑 Access:
